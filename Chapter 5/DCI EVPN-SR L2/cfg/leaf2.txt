@@ -1,0 +1,115 @@
+interface ethernet-1/1 {
+	admin-state enable
+	subinterface 0 {
+		type bridged
+		admin-state enable
+	}
+}
+    
+interface ethernet-1/49 {
+	admin-state enable
+	subinterface 0 {
+		ipv4 {
+			admin-state enable
+			address 172.16.22.2/30 {
+			}
+		}
+	}
+}
+
+interface system0 {
+	admin-state enable
+	subinterface 0 {
+		ipv4 {
+			admin-state enable
+			address 20.0.0.2/32 {
+			}
+		}
+	}
+}
+
+tunnel-interface vxlan1 {
+	vxlan-interface 1 {
+		type bridged
+		ingress {
+			vni 2001
+		}
+	}
+}
+
+
+routing-policy {
+	policy all {
+		default-action {
+			policy-result accept
+		}
+	}
+}
+
+
+network-instance default {
+	interface ethernet-1/49.0 {
+	}
+	interface system0.0 {
+	}
+	protocols {
+		bgp {
+			autonomous-system 64002
+			router-id 20.0.0.2
+			afi-safi ipv4-unicast {
+				admin-state enable
+			}
+			group eBGP-underlay {
+				export-policy all
+				import-policy all
+				peer-as 64000
+			}
+			group iBGP-evpn {
+				export-policy all
+				import-policy all
+				peer-as 64513
+				afi-safi evpn {
+					admin-state enable
+				}
+				afi-safi ipv4-unicast {
+					admin-state disable
+				}
+				local-as {
+					as-number 64513
+				}
+			}
+			neighbor 20.0.2.2 {
+				peer-group iBGP-evpn
+			}
+			neighbor 172.16.22.1 {
+				peer-group eBGP-underlay
+			}
+		}
+	}
+}
+
+network-instance MAC-BLUE {
+	type mac-vrf
+	admin-state enable
+	interface ethernet-1/1.0 {
+	}
+	vxlan-interface vxlan1.1 {
+	}
+	protocols {
+		bgp-evpn {
+			bgp-instance 1 {
+				admin-state enable
+				vxlan-interface vxlan1.1
+				evi 100
+			}
+		}
+		bgp-vpn {
+			bgp-instance 1 {
+				route-target {
+					export-rt target:64513:100
+					import-rt target:64513:100
+				}
+			}
+		}
+	}
+}
