@@ -37,17 +37,17 @@ topology:
       kind: vr-sros
       image: vrnetlab/vr-sros:22.10.R2
       type: sr-1
-      license: r22_license.lic
+      license: license.lic
     dcgw2:
       kind: vr-sros
       image: vrnetlab/vr-sros:22.10.R2
       type: sr-1
-      license: r22_license.lic
+      license: license.lic
     core:
       kind: vr-sros
       image: vrnetlab/vr-sros:22.10.R2
       type: sr-1
-      license: r22_license.lic
+      license: license.lic
 
   links:
     - endpoints: ["server1:eth1", "leaf1:e1-1"]
