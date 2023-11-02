@@ -1,0 +1,48 @@
+name: evpn-trial
+prefix: ""
+
+topology:
+  kinds:
+    srl:
+      image: ghcr.io/nokia/srlinux:23.3.1
+    linux:
+      image: ghcr.io/hellt/network-multitool
+    
+
+  nodes:
+    leaf1:
+      kind: srl
+      type: ixrd2
+    leaf2:
+      kind: srl
+      type: ixrd2
+    spine1:
+      kind: srl
+      type: ixrd3
+    server1:
+      kind: linux
+      exec:
+        - ip link set address aa:c1:ab:26:2f:ed dev eth1
+        - ip addr add 192.168.1.1/24 dev eth1
+        - route delete default gw 172.20.20.1 eth0
+        - route add default gw 192.168.1.254 eth1
+    server2:
+      kind: linux
+      exec:
+        - ip link set address aa:c1:ab:4e:9f:70 dev eth1
+        - ip addr add 192.168.1.2/24 dev eth1
+        - route delete default gw 172.20.20.1 eth0
+        - route add default gw 192.168.1.254 eth1  
+
+  links:
+    
+    # leafs <-> spines
+    - endpoints: ["leaf1:e1-49", "spine1:e1-1"]
+    - endpoints: ["leaf2:e1-49", "spine1:e1-2"]
+
+    # servers <-> leaf1
+    - endpoints: ["server1:eth1", "leaf1:e1-1"]
+    - endpoints: ["server2:eth1", "leaf2:e1-1"]
+
+
+  

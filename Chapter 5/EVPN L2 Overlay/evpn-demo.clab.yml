@@ -1,0 +1,63 @@
+name: evpn-demo
+
+prefix: ""
+
+topology:
+  kinds:
+    srl:
+      image: ghcr.io/nokia/srlinux:23.3.1
+    linux:
+      image: ghcr.io/hellt/network-multitool
+    
+
+  nodes:
+    leaf1:
+      kind: srl
+      type: ixrd2
+    leaf2:
+      kind: srl
+      type: ixrd2
+    leaf3:
+      kind: srl
+      type: ixrd2
+    spine1:
+      kind: srl
+      type: ixrd3
+    spine2:
+      kind: srl
+      type: ixrd3
+    server1:
+      kind: linux
+      exec:
+        - ip addr add 192.168.1.1/24 dev eth1
+        - route delete default gateway 172.20.20.1 eth0
+        - route add default gw 192.168.1.254 eth1
+    server2:
+      kind: linux
+      exec:
+        - ip addr add 192.168.1.2/24 dev eth1
+        - route delete default gateway 172.20.20.1 eth0
+        - route add default gw 192.168.1.254 eth1
+    server3:
+      kind: linux
+      exec:
+        - ip addr add 192.168.1.3/24 dev eth1
+        - route delete default gateway 172.20.20.1 eth0
+        - route add default gw 192.168.1.254 eth1
+        
+  links:
+    - endpoints: ["leaf1:e1-49", "spine1:e1-1"]
+    - endpoints: ["leaf1:e1-50", "spine2:e1-1"]
+
+    - endpoints: ["leaf2:e1-49", "spine1:e1-2"]
+    - endpoints: ["leaf2:e1-50", "spine2:e1-2"]
+
+    - endpoints: ["leaf3:e1-49", "spine1:e1-3"]
+    - endpoints: ["leaf3:e1-50", "spine2:e1-3"]
+
+
+    - endpoints: ["server1:eth1", "leaf1:e1-1"]
+    - endpoints: ["server2:eth1", "leaf2:e1-1"]
+    - endpoints: ["server3:eth1", "leaf3:e1-1"]
+
+

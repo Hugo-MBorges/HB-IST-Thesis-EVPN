@@ -1,0 +1,181 @@
+interface ethernet-1/1 {
+        description Bond-to-lag1
+        admin-state enable
+        ethernet {
+            aggregate-id lag1
+        }
+    }
+
+interface lag1 {
+        admin-state enable
+        subinterface 1 {
+            type bridged
+        }
+        lag {
+            lag-type static
+            member-speed 25G
+        }
+    }
+
+interface ethernet-1/49 {
+        admin-state enable
+        subinterface 0 {
+            ipv4 {
+                admin-state enable
+                address 172.16.13.2/30 {
+                }
+            }
+        }
+    }
+
+interface ethernet-1/50 {
+        admin-state enable
+        subinterface 0 {
+            ipv4 {
+                admin-state enable
+                address 172.16.23.2/30 {
+                }
+            }
+        }
+    }
+
+interface system0 {
+        admin-state enable
+        subinterface 0 {
+            ipv4 {
+                admin-state enable
+                address 10.0.0.3/32 {
+                }
+            }
+        }
+    }
+
+tunnel-interface vxlan1 {
+        vxlan-interface 1 {
+            type bridged
+            ingress {
+                vni 1001
+            }
+        }
+    }
+
+system {
+        network-instance {
+            protocols {
+                evpn {
+                    ethernet-segments {
+                        bgp-instance 1 {
+                            ethernet-segment ES-1 {
+                                admin-state enable
+                                esi 00:11:11:11:11:00:00:00:00:01
+                                interface lag1 {
+                                }
+                            }
+                        }
+                    }
+                }
+                bgp-vpn {
+                    bgp-instance 1 {
+                    }
+                }
+            }
+        }
+    }
+
+routing-policy {
+        policy all {
+            default-action {
+                policy-result accept
+            }
+        }
+    }
+
+network-instance default {
+        interface ethernet-1/49.0 {
+        }
+        interface ethernet-1/50.0 {
+        }
+        interface system0.0 {
+        }
+        protocols {
+            bgp {
+                autonomous-system 65103
+                router-id 10.0.0.3
+                afi-safi ipv4-unicast {
+                    admin-state enable
+                }
+                group eBGP-underlay {
+                    admin-state enable
+                    export-policy all
+                    import-policy all
+                    peer-as 65000
+                }
+                group iBGP-evpn {
+                    admin-state enable
+                    export-policy all
+                    import-policy all
+                    peer-as 64512
+                    afi-safi evpn {
+                        admin-state enable
+                    }
+                    afi-safi ipv4-unicast {
+                        admin-state disable
+                    }
+                    local-as {
+                        as-number 64512
+                    }
+                }
+                neighbor 10.0.1.1 {
+                    peer-group iBGP-evpn
+                }
+                neighbor 172.16.13.1 {
+                    peer-group eBGP-underlay
+                }
+                neighbor 172.16.23.1 {
+                    peer-group eBGP-underlay
+                }
+            }
+        }
+    }
+
+network-instance MAC-BLUE-1 {
+        type mac-vrf
+        admin-state enable
+        interface lag1.1 {
+        }
+        vxlan-interface vxlan1.1 {
+        }
+        protocols {
+            bgp-evpn {
+                bgp-instance 1 {
+                    vxlan-interface vxlan1.1
+                    evi 101
+                    routes {
+                        bridge-table {
+                            mac-ip {
+                                advertise true
+                            }
+                        }
+                    }
+                }
+            }
+            bgp-vpn {
+                bgp-instance 1 {
+                    route-target {
+                        export-rt target:64512:101
+                        import-rt target:64512:101
+                    }
+                }
+            }
+        }
+        bridge-table {
+            proxy-arp {
+                admin-state enable
+                dynamic-learning {
+                    admin-state enable
+                    age-time 300
+                    send-refresh 120
+                }
+            }
+        }
+    }
