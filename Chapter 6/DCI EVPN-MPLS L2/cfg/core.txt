@@ -1,0 +1,129 @@
+port 1/1/c1 {
+        admin-state enable
+        connector {
+            breakout c1-100g
+        }
+    }
+    port 1/1/c1/1 {
+        admin-state enable
+        ethernet {
+            mode network
+            encap-type dot1q
+        }
+    }
+    port 1/1/c2 {
+        admin-state enable
+        connector {
+            breakout c1-100g
+        }
+    }
+    port 1/1/c2/1 {
+        admin-state enable
+        ethernet {
+            mode network
+            encap-type dot1q
+        }
+    }
+
+router "Base" {
+        autonomous-system 65111
+        router-id 100.100.100.100
+        interface "CORE_TO_DCGW1" {
+            admin-state enable
+            port 1/1/c1/1:1
+            ipv4 {
+                primary {
+                    address 172.16.100.1
+                    prefix-length 30
+                }
+            }
+        }
+        interface "CORE_TO_DCGW2" {
+            admin-state enable
+            port 1/1/c2/1:1
+            ipv4 {
+                primary {
+                    address 172.16.200.1
+                    prefix-length 30
+                }
+            }
+        }
+        interface "system" {
+            ipv4 {
+                primary {
+                    address 100.100.100.100
+                    prefix-length 32
+                }
+            }
+        }
+        bgp {
+            rapid-update {
+                vpn-ipv4 true
+                l2-vpn true
+                evpn true
+                label-ipv4 true
+            }
+            group "RR_EVPN" {
+                description "RR for EVPN DCGW"
+                type internal
+                peer-as 65111
+                family {
+                    evpn true
+                }
+                cluster {
+                    cluster-id 100.100.100.0
+                }
+                local-as {
+                    as-number 65111
+                }
+            }
+            neighbor "1.1.1.1" {
+                group "RR_EVPN"
+            }
+            neighbor "2.2.2.2" {
+                group "RR_EVPN"
+            }
+        }
+        isis 0 {
+            admin-state enable
+            level-capability 2
+            area-address [10.0000]
+            interface "CORE_TO_DCGW1" {
+                admin-state enable
+                interface-type point-to-point
+                level 2 {
+                    metric 100
+                }
+            }
+            interface "CORE_TO_DCGW2" {
+                admin-state enable
+                interface-type point-to-point
+                level 2 {
+                    metric 100
+                }
+            }
+            interface "system" {
+                admin-state enable
+                passive true
+            }
+        }
+        ldp {
+            admin-state enable
+            fast-reroute {
+            }
+            interface-parameters {
+                interface "CORE_TO_DCGW1" {
+                    admin-state enable
+                    ipv4 {
+                        admin-state enable
+                    }
+                }
+                interface "CORE_TO_DCGW2" {
+                    admin-state enable
+                    ipv4 {
+                        admin-state enable
+                    }
+                }
+            }
+        }
+    }

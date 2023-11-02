@@ -1,0 +1,68 @@
+name: evpn-mpls
+prefix: ""
+
+
+topology:
+  kinds:
+    srl:
+      image: ghcr.io/nokia/srlinux:latest
+    linux:
+      image: ghcr.io/hellt/network-multitool:latest
+
+  nodes:
+    server1:
+      kind: linux
+      exec:
+        - ip addr add 192.168.12.1/24 dev eth1
+        - ip link set address aa:c1:ab:26:2f:ed dev eth1
+        - route delete default gw 172.20.20.1 eth0
+        - route add default gw 192.168.12.254
+    server2:
+      kind: linux
+      exec:
+        - ip addr add 192.168.12.2/24 dev eth1
+        - ip link set address aa:c1:ab:4e:9f:70 dev eth1
+        - route delete default gw 172.20.20.1 eth0
+        - route add default gw 192.168.12.254
+    leaf1:
+      kind: srl
+      type: ixrd2
+    spine1:
+      kind: srl
+      type: ixrd2
+    spine2:
+      kind: srl
+      type: ixrd2
+    leaf2:
+      kind: srl
+      type: ixrd2
+    dcgw1:
+      kind: vr-sros
+      image: vrnetlab/vr-sros:22.10.R2
+      type: sr-1
+      license: license.lic
+    dcgw2:
+      kind: vr-sros
+      image: vrnetlab/vr-sros:22.10.R2
+      type: sr-1
+      license: license.lic
+    core:
+      kind: vr-sros
+      image: vrnetlab/vr-sros:22.10.R2
+      type: sr-1
+      license: license.lic
+
+  links:
+    - endpoints: ["server1:eth1", "leaf1:e1-1"]
+    - endpoints: ["server2:eth1", "leaf2:e1-1"]
+    
+    - endpoints: ["leaf1:e1-49", "spine1:e1-1"]
+    - endpoints: ["spine1:e1-3", "dcgw1:eth3"]
+  
+    - endpoints: ["dcgw1:eth1", "core:eth1"]
+    - endpoints: ["core:eth2", "dcgw2:eth2"]
+    
+    - endpoints: ["leaf2:e1-49", "spine2:e1-1"]
+    - endpoints: ["spine2:e1-3", "dcgw2:eth1"]
+    
+

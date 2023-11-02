@@ -1,0 +1,188 @@
+ policy-options {
+        policy-statement "eBGP_ACCEPT_ALL" {
+            default-action {
+                action-type accept
+            }
+        }
+    }
+    port 1/1/c1 {
+        admin-state enable
+        connector {
+            breakout c1-100g
+        }
+    }
+    port 1/1/c1/1 {
+        admin-state enable
+        ethernet {
+            mode network
+            encap-type dot1q
+        }
+    }
+    port 1/1/c2 {
+        admin-state enable
+        connector {
+            breakout c1-100g
+        }
+    }
+    port 1/1/c2/1 {
+        admin-state enable
+        ethernet {
+            mode network
+            encap-type dot1q
+        }
+    }
+
+router "Base" {
+        autonomous-system 65111
+        router-id 2.2.2.2
+        interface "DCGW2_TO_CORE" {
+            admin-state enable
+            port 1/1/c2/1:1
+            ipv4 {
+                primary {
+                    address 172.16.200.2
+                    prefix-length 30
+                }
+            }
+        }
+        interface "DCGW2_TO_SPINE2" {
+            admin-state enable
+            port 1/1/c1/1:1
+            ipv4 {
+                primary {
+                    address 172.16.201.2
+                    prefix-length 30
+                }
+            }
+        }
+        interface "system" {
+            ipv4 {
+                primary {
+                    address 2.2.2.2
+                    prefix-length 32
+                }
+            }
+        }
+        bgp {
+            rapid-update {
+                vpn-ipv4 true
+                l2-vpn true
+                evpn true
+                label-ipv4 true
+            }
+            group "DC-underlay" {
+                description "Underlay BGP for DC2"
+                peer-as 64000
+                family {
+                    ipv4 true
+                }
+                local-as {
+                    as-number 64200
+                }
+                import {
+                    policy ["eBGP_ACCEPT_ALL"]
+                }
+                export {
+                    policy ["eBGP_ACCEPT_ALL"]
+                }
+            }
+            group "EVPN-DC2" {
+                type internal
+                peer-as 64513
+                family {
+                    evpn true
+                }
+                local-as {
+                    as-number 64513
+                }
+            }
+            group "EVPN-WAN" {
+                description "RR for EVPN DCGW"
+                type internal
+                peer-as 65111
+                family {
+                    evpn true
+                }
+                local-as {
+                    as-number 65111
+                }
+            }
+            neighbor "20.0.2.2" {
+                group "EVPN-DC2"
+            }
+            neighbor "100.100.100.100" {
+                group "EVPN-WAN"
+            }
+            neighbor "172.16.201.1" {
+                group "DC-underlay"
+            }
+        }
+        isis 0 {
+            admin-state enable
+            level-capability 2
+            area-address [10.0000]
+            interface "DCGW2_TO_CORE" {
+                admin-state enable
+                interface-type point-to-point
+                level 2 {
+                    metric 100
+                }
+            }
+            interface "system" {
+                admin-state enable
+                passive true
+            }
+        }
+        ldp {
+            admin-state enable
+            fast-reroute {
+            }
+            interface-parameters {
+                interface "DCGW2_TO_CORE" {
+                    ipv4 {
+                        admin-state enable
+                    }
+                }
+            }
+        }
+    }
+
+
+service {
+        vpls "100" {
+            admin-state enable
+            customer "1"
+            vxlan {
+                instance 1 {
+                    vni 2001
+                }
+            }
+            bgp 1 {
+                route-distinguisher "2.2.2.2:100"
+                route-target {
+                    export "target:64513:100"
+                    import "target:64513:100"
+                }
+            }
+            bgp 2 {
+                route-distinguisher "2.2.2.2:101"
+                route-target {
+                    export "target:65111:100"
+                    import "target:65111:100"
+                }
+            }
+            bgp-evpn {
+                evi 100
+                vxlan 1 {
+                    admin-state enable
+                    vxlan-instance 1
+                }
+                mpls 2 {
+                    admin-state enable
+                    auto-bind-tunnel {
+                        resolution any
+                    }
+                }
+            }
+        }
+    }
