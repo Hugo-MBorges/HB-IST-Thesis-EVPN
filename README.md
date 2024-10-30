@@ -1,2 +1,2 @@
 # Th-EVPN
-Repository for experiments used in my Masther's Thesis @ Instituto Superior Técnico
+Repository for experiments used in my Master's Thesis @ Instituto Superior Técnico
